@@ -1,25 +1,31 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-
+const authRoutes = require('./routes/auth.routes');
+const userRoutes = require('./routes/user.routes');
+const attendanceRoutes = require('./routes/attendance.routes');
+const leaveRoutes = require('./routes/leave.routes');
+const adminRoutes = require('./routes/admin.routes');
 dotenv.config();
 
 const app = express();
 
 // Middleware
 app.use(cors({
-    origin: 'http://localhost:5173', // Vite default port
+    origin: 'http://localhost:5173', // Allow Vite Frontend
     credentials: true
 }));
 app.use(express.json());
 
-// Basic Route for Testing
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/leaves', leaveRoutes);
+app.use('/api/admin', adminRoutes);
+// Test Route
 app.get('/', (req, res) => {
     res.json({ message: "Dayflow API is running 🚀" });
 });
-
-// TODO: Import Routes Here
-// const authRoutes = require('./routes/auth.routes');
-// app.use('/api/auth', authRoutes);
 
 module.exports = app;
