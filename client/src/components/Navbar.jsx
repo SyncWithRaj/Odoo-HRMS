@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, LogOut, Clock, ChevronDown, Bell } from 'lucide-react';
+import { User, LogOut, Clock, ChevronDown, Bell, ForkKnife, Computer, ComputerIcon, Activity } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -16,13 +16,13 @@ const Navbar = () => {
       <div className="flex items-center space-x-12">
         <Link 
           to="/" 
-          className="text-2xl font-black tracking-tighter text-white flex items-center gap-2 group"
+          className="text-3xl font-black tracking-tighter text-white flex items-center gap-2 group"
         >
-          <div className="w-8 h-8 bg-indigo-500 rounded-lg rotate-3 group-hover:rotate-12 transition-transform duration-300 flex items-center justify-center">
-             <Clock className="text-white" size={18} />
+          <div className="w-10 h-10 bg-indigo-500 rounded-lg rotate-3 group-hover:rotate-12 transition-transform duration-300 flex items-center justify-center">
+             <Activity className="text-white" size={18} />
           </div>
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-            DayFlow
+            Kinetix
           </span>
         </Link>
         

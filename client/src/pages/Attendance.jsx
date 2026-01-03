@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Clock, CheckCircle, Calendar, Search, MapPin, ArrowRight, User as UserIcon } from 'lucide-react';
+import { Clock, CheckCircle, Calendar, Search, MapPin, ArrowRight, User as UserIcon, Coffee } from 'lucide-react';
 
 const Attendance = () => {
   const { user } = useAuth();
@@ -11,6 +11,7 @@ const Attendance = () => {
   const [status, setStatus] = useState('LOADING');
   const [history, setHistory] = useState([]);
   const [todayRecord, setTodayRecord] = useState(null);
+  const [leaveStats, setLeaveStats] = useState(0); // NEW: Total approved leaves for employee
   
   // State for Admin View
   const [adminRecords, setAdminRecords] = useState([]);
@@ -26,6 +27,10 @@ const Attendance = () => {
 
       const historyRes = await api.get('/attendance/my-history');
       setHistory(historyRes.data);
+
+      // NEW: Fetch Leave Stats for the logged-in employee
+      const statsRes = await api.get(`/users/stats/${user.id}`);
+      setLeaveStats(statsRes.data.totalLeaveDays);
     } catch (error) {
       console.error("Employee fetch error:", error);
     }
@@ -33,7 +38,11 @@ const Attendance = () => {
 
   const fetchAdminData = async () => {
     try {
+      // Admin fetches attendance for specific date
       const { data } = await api.get(`/attendance/all?date=${selectedDate}`);
+      
+      // NEW: We assume the backend updated the 'all' endpoint to include totalLeaveDays per user
+      // or we map the results. For this implementation, we display what the API returns.
       setAdminRecords(data);
     } catch (error) {
       console.error("Admin fetch error:", error);
@@ -118,6 +127,8 @@ const Attendance = () => {
                 <th className="px-6 py-4">Check In</th>
                 <th className="px-6 py-4">Check Out</th>
                 <th className="px-6 py-4 text-center">Work Hours</th>
+                {/* NEW COLUMN FOR ADMIN */}
+                <th className="px-6 py-4 text-center">Total Leaves</th>
                 <th className="px-6 py-4 text-right">Status</th>
               </tr>
             </thead>
@@ -154,6 +165,12 @@ const Attendance = () => {
                         {record.workHours ? `${record.workHours}h` : '--'}
                       </span>
                     </td>
+                    {/* NEW CELL FOR ADMIN */}
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-rose-400 font-bold text-sm bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
+                        {record.user.totalApprovedLeaves || 0} Days
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border
                         ${record.status === 'PRESENT' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}
@@ -165,7 +182,7 @@ const Attendance = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-20 text-center">
+                  <td colSpan="6" className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center opacity-20">
                       <Search size={48} className="mb-2" />
                       <p className="text-sm font-medium">No records found for this date</p>
@@ -183,6 +200,30 @@ const Attendance = () => {
   // 4. EMPLOYEE VIEW
   return (
     <div className="space-y-8 max-w-5xl mx-auto animate-in slide-in-from-bottom-4 duration-700">
+      
+      {/* NEW: LEAVE STATS HEADER CARD FOR EMPLOYEE */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gray-900/50 backdrop-blur-xl p-6 rounded-[2rem] border border-gray-800 shadow-xl flex items-center justify-between group">
+            <div>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Approved Leaves</p>
+              <p className="text-3xl font-black text-rose-500 tracking-tighter">{leaveStats} Days</p>
+            </div>
+            <div className="p-4 bg-rose-500/10 rounded-2xl text-rose-500 border border-rose-500/20 group-hover:scale-110 transition-transform">
+              <Coffee size={24} />
+            </div>
+          </div>
+          
+          <div className="bg-gray-900/50 backdrop-blur-xl p-6 rounded-[2rem] border border-gray-800 shadow-xl flex items-center justify-between group md:col-span-2">
+            <div>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Current Status</p>
+              <p className="text-3xl font-black text-indigo-400 tracking-tighter uppercase">{status.replace('_', ' ')}</p>
+            </div>
+            <div className="p-4 bg-indigo-500/10 rounded-2xl text-indigo-400 border border-indigo-500/20">
+              <Clock size={24} />
+            </div>
+          </div>
+      </div>
+
       {/* TODAY'S HERO CARD */}
       <div className="bg-gray-900 border border-gray-800 rounded-[2.5rem] p-10 shadow-2xl flex flex-col lg:row-reverse lg:flex-row items-center justify-between gap-12 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 rounded-full blur-3xl -mr-32 -mt-32"></div>

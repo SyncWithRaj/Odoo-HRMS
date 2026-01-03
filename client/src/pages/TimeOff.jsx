@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Check, X, Calendar, Clock, FileText, Send, User as UserIcon } from 'lucide-react';
+import { Check, X, Calendar, Clock, FileText, Send, Coffee } from 'lucide-react';
 
 const TimeOff = () => {
   const { user } = useAuth();
@@ -15,6 +15,18 @@ const TimeOff = () => {
     endDate: '',
     reason: ''
   });
+
+  // Helper function to calculate duration between two dates
+  const calculateDuration = (start, end) => {
+    return Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  // Helper to calculate total approved days for a specific list of leaves
+  const getTotalApprovedDays = (leaveList) => {
+    return leaveList
+      .filter(l => l.status === 'APPROVED')
+      .reduce((sum, l) => sum + calculateDuration(l.startDate, l.endDate), 0);
+  };
 
   const fetchLeaves = async () => {
     try {
@@ -73,7 +85,17 @@ const TimeOff = () => {
         </div>
         
         {/* Quick Stats Summary */}
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap justify-end">
+            {/* NEW: Total Days Taken (Employee Only) */}
+            {user.role === 'EMPLOYEE' && (
+              <div className="bg-indigo-500/10 px-6 py-3 rounded-2xl border border-indigo-500/20 backdrop-blur-md">
+                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                    <Coffee size={12}/> Approved Days
+                  </p>
+                  <p className="text-xl font-black text-white">{getTotalApprovedDays(leaves)}</p>
+              </div>
+            )}
+            
             <div className="bg-gray-900/50 px-6 py-3 rounded-2xl border border-gray-800 backdrop-blur-md">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending</p>
                 <p className="text-xl font-black text-yellow-500">{leaves.filter(l => l.status === 'PENDING').length}</p>
@@ -138,7 +160,7 @@ const TimeOff = () => {
                 />
             </div>
 
-            <button type="submit" className="md:col-span-4 bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]">
+            <button type="submit" className="md:col-span-4 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]">
               Submit Request to HR
             </button>
           </form>
@@ -163,6 +185,8 @@ const TimeOff = () => {
                 <th className="px-8 py-4">Duration</th>
                 <th className="px-8 py-4">Reason</th>
                 <th className="px-8 py-4">Status</th>
+                {/* NEW: Total Leaves Column for Admin */}
+                {user.role === 'ADMIN' && <th className="px-8 py-4 text-center">Total (Approved)</th>}
                 {user.role === 'ADMIN' && <th className="px-8 py-4 text-right">Review</th>}
               </tr>
             </thead>
@@ -193,7 +217,7 @@ const TimeOff = () => {
                             {new Date(leave.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(leave.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                         <span className="text-[10px] text-gray-600 font-bold uppercase tracking-tighter">
-                            {Math.ceil((new Date(leave.endDate) - new Date(leave.startDate)) / (1000 * 60 * 60 * 24)) + 1} Days
+                            {calculateDuration(leave.startDate, leave.endDate)} Days
                         </span>
                     </div>
                   </td>
@@ -208,6 +232,14 @@ const TimeOff = () => {
                       {leave.status}
                     </span>
                   </td>
+                  {/* NEW: Admin data cell to show total leaves for this employee */}
+                  {user.role === 'ADMIN' && (
+                    <td className="px-8 py-5 text-center">
+                      <span className="text-xs font-mono font-bold text-gray-400">
+                        {getTotalApprovedDays(leaves.filter(l => l.userId === leave.userId))} Days
+                      </span>
+                    </td>
+                  )}
                   {user.role === 'ADMIN' && (
                     <td className="px-8 py-5 text-right">
                         {leave.status === 'PENDING' ? (
