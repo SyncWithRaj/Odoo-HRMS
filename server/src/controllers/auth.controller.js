@@ -2,24 +2,91 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const generateEmployeeId = require('../utils/generateId');
+const nodemailer = require('nodemailer');
 
 const prisma = new PrismaClient();
 
+// Temporary OTP Store (Use Redis or DB in production)
+const otpStore = new Map();
+
+// Configure Email Transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail', // or your SMTP provider
+    auth: {
+        user: process.env.EMAIL_USER, // Add to .env
+        pass: process.env.EMAIL_PASS  // Add App Password to .env
+    }
+});
+
+// --- 1. SEND OTP ---
+const sendOtp = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) return res.status(400).json({ message: "Email already registered" });
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store OTP with expiry (10 minutes)
+        otpStore.set(email, { 
+            otp, 
+            expires: Date.now() + 10 * 60 * 1000 
+        });
+
+        // Send Email
+        await transporter.sendMail({
+            from: `"Kinetix HR" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Verify your Kinetix Account',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2 style="color: #4F46E5;">Kinetix Verification</h2>
+                    <p>Your verification code is:</p>
+                    <h1 style="background: #eee; padding: 10px; display: inline-block; letter-spacing: 5px;">${otp}</h1>
+                    <p>This code expires in 10 minutes.</p>
+                </div>
+            `
+        });
+
+        res.json({ message: "OTP sent to your email" });
+
+    } catch (error) {
+        console.error("OTP Error:", error);
+        res.status(500).json({ message: "Failed to send OTP" });
+    }
+};
+
+// --- 2. REGISTER (Verifies OTP + Creates User) ---
 const register = async (req, res) => {
     try {
-        const { firstName, lastName, email, password, phone, role } = req.body;
+        const { firstName, lastName, email, password, phone, role, otp } = req.body;
 
-        // 1. Check if email exists
+        // 1. Verify OTP
+        const storedData = otpStore.get(email);
+        
+        if (!storedData) {
+            return res.status(400).json({ message: "OTP expired or not requested" });
+        }
+
+        if (storedData.otp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        if (Date.now() > storedData.expires) {
+            otpStore.delete(email);
+            return res.status(400).json({ message: "OTP expired" });
+        }
+
+        // 2. Proceed with Registration
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) return res.status(400).json({ message: "Email already exists" });
 
-        // 2. Generate Custom Employee ID
         const employeeId = await generateEmployeeId(firstName, lastName);
-
-        // 3. Hash Password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // 4. Create User
         const newUser = await prisma.user.create({
             data: {
                 employeeId,
@@ -28,11 +95,13 @@ const register = async (req, res) => {
                 email,
                 password: hashedPassword,
                 phone,
-                role: role || 'EMPLOYEE' // Default to Employee if not specified
+                role: role || 'EMPLOYEE'
             }
         });
 
-        // 5. Generate Token
+        // Cleanup OTP
+        otpStore.delete(email);
+
         const token = jwt.sign(
             { id: newUser.id, role: newUser.role },
             process.env.JWT_SECRET,
@@ -40,10 +109,9 @@ const register = async (req, res) => {
         );
 
         res.status(201).json({ 
-            message: "User created successfully", 
+            message: "User verified and created successfully", 
             user: { 
                 id: newUser.id,
-                employeeId: newUser.employeeId,
                 email: newUser.email, 
                 role: newUser.role 
             },
@@ -55,7 +123,6 @@ const register = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
-
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -94,4 +161,4 @@ const login = async (req, res) => {
     }
 };
 
-module.exports = { register, login };
+module.exports = { register, login, sendOtp };
