@@ -1,5 +1,5 @@
 // client/src/context/AuthContext.jsx
-import { createContext, useContext, useState } from 'react'; // Removed useEffect
+import { createContext, useContext, useState } from 'react'; 
 import api from '../utils/api';
 
 const AuthContext = createContext();
@@ -11,8 +11,17 @@ export const AuthProvider = ({ children }) => {
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
-  // 2. We are always "loaded" now, so we don't need setLoading
   const [loading] = useState(false);
+
+  // --- NEW HELPER FUNCTION ---
+  // This updates BOTH the React State and LocalStorage
+  const updateUser = (newData) => {
+    setUser((prevUser) => {
+      const updatedUser = { ...prevUser, ...newData };
+      localStorage.setItem('user', JSON.stringify(updatedUser)); // Sync storage
+      return updatedUser;
+    });
+  };
 
   const login = async (email, password) => {
     try {
@@ -45,7 +54,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      setUser, 
+      updateUser, // <--- EXPORT THIS
+      login, 
+      register, 
+      logout, 
+      loading 
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   );

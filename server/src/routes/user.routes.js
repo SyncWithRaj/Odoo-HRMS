@@ -4,20 +4,17 @@ const {
   getAllEmployees, 
   getUserById, 
   updateUserProfile,
-  getUserProfile 
+  getUserProfile,
+  uploadMiddleware // <--- Import this
 } = require('../controllers/user.controller');
 
 const router = express.Router();
 
-// 1. Profile Routes (Self)
-router.put('/profile', protect, updateUserProfile);
+// Apply uploadMiddleware to handle 'multipart/form-data'
+router.put('/profile', protect, uploadMiddleware, updateUserProfile);
+
 router.get('/profile', protect, getUserProfile);
-
-// 2. Shared & Admin Routes
-// REMOVED 'admin' from the root GET so employees can fetch the list
 router.get('/', protect, getAllEmployees); 
-
-// Keep 'admin' here so only admins can see specific detailed popups/profiles
 router.get('/:id', protect, admin, getUserById);
 
 module.exports = router;
