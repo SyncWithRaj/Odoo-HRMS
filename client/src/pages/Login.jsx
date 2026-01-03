@@ -35,7 +35,7 @@ const Login = () => {
           <div className="w-14 h-14 bg-indigo-600 rounded-2xl rotate-12 flex items-center justify-center mb-4 shadow-xl shadow-indigo-600/20">
             <Clock className="text-white -rotate-12" size={32} />
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tighter">DayFlow</h1>
+          <h1 className="text-4xl font-black text-white tracking-tighter">Kinetix</h1>
           <p className="text-gray-500 font-medium mt-1">Enterprise Resource Management</p>
         </div>
 
