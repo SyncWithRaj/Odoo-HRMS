@@ -2,13 +2,19 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Check, X, Calendar, Clock, FileText, Send, Coffee } from 'lucide-react';
+import { Check, X, Calendar, Clock, FileText, Send, Coffee, ShieldAlert } from 'lucide-react';
 
 const TimeOff = () => {
   const { user } = useAuth();
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // --- MODAL STATE ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState(null);
+  const [actionType, setActionType] = useState(null); 
+  const [adminRemark, setAdminRemark] = useState('');
+
   const [formData, setFormData] = useState({
     type: 'PAID',
     startDate: '',
@@ -16,12 +22,10 @@ const TimeOff = () => {
     reason: ''
   });
 
-  // Helper function to calculate duration between two dates
   const calculateDuration = (start, end) => {
     return Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1;
   };
 
-  // Helper to calculate total approved days for a specific list of leaves
   const getTotalApprovedDays = (leaveList) => {
     return leaveList
       .filter(l => l.status === 'APPROVED')
@@ -57,13 +61,28 @@ const TimeOff = () => {
     }
   };
 
-  const handleStatus = async (id, status) => {
+  const openActionModal = (leave, type) => {
+    setSelectedLeave(leave);
+    setActionType(type);
+    setAdminRemark(''); 
+    setIsModalOpen(true);
+  };
+
+  const handleSubmitAction = async () => {
+    if (!selectedLeave) return;
+    
+    const loadId = toast.loading(`Marking as ${actionType}...`);
     try {
-      await api.put('/leaves/status', { leaveId: id, status });
-      toast.success(`Request ${status.toLowerCase()}`);
+      await api.put('/leaves/status', { 
+        leaveId: selectedLeave.id, 
+        status: actionType,
+        remark: adminRemark 
+      });
+      toast.success(`Request ${actionType.toLowerCase()}`, { id: loadId });
+      setIsModalOpen(false);
       fetchLeaves();
     } catch (error) {
-      toast.error("Action failed");
+      toast.error("Action failed", { id: loadId });
     }
   };
 
@@ -75,18 +94,16 @@ const TimeOff = () => {
   );
 
   return (
-    <div className="space-y-10 max-w-7xl mx-auto animate-in fade-in duration-700">
+    <div className="space-y-10 max-w-7xl mx-auto animate-in fade-in duration-700 relative">
       
-      {/* HEADER & SUMMARY */}
+      {/* HEADER (Unchanged) */}
       <div className="flex flex-col md:flex-row justify-between items-end gap-6">
         <div>
           <h1 className="text-4xl font-black text-white tracking-tighter">Time Off Management</h1>
           <p className="text-gray-500 font-medium mt-1">Manage absence requests and leave balances</p>
         </div>
         
-        {/* Quick Stats Summary */}
         <div className="flex gap-4 flex-wrap justify-end">
-            {/* NEW: Total Days Taken (Employee Only) */}
             {user.role === 'EMPLOYEE' && (
               <div className="bg-indigo-500/10 px-6 py-3 rounded-2xl border border-indigo-500/20 backdrop-blur-md">
                   <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
@@ -95,7 +112,6 @@ const TimeOff = () => {
                   <p className="text-xl font-black text-white">{getTotalApprovedDays(leaves)}</p>
               </div>
             )}
-            
             <div className="bg-gray-900/50 px-6 py-3 rounded-2xl border border-gray-800 backdrop-blur-md">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending</p>
                 <p className="text-xl font-black text-yellow-500">{leaves.filter(l => l.status === 'PENDING').length}</p>
@@ -107,20 +123,18 @@ const TimeOff = () => {
         </div>
       </div>
 
-      {/* EMPLOYEE: REQUEST FORM */}
+      {/* REQUEST FORM (Unchanged) */}
       {user.role === 'EMPLOYEE' && (
         <div className="bg-gray-900/50 backdrop-blur-xl p-8 rounded-[2.5rem] border border-gray-800 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-          
           <h2 className="text-xl font-black text-white mb-6 flex items-center gap-3">
             <Send className="text-indigo-500" size={20} /> Request New Leave
           </h2>
-          
           <form onSubmit={handleApply} className="grid grid-cols-1 md:grid-cols-4 gap-6 relative z-10">
             <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Leave Type</label>
                 <select 
-                className="w-full bg-gray-800 border border-gray-700 text-white p-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+                className="w-full bg-gray-800 border border-gray-700 text-white p-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
                 value={formData.type}
                 onChange={(e) => setFormData({...formData, type: e.target.value})}
                 >
@@ -129,37 +143,18 @@ const TimeOff = () => {
                 <option value="UNPAID">Unpaid Leave</option>
                 </select>
             </div>
-
             <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Start Date</label>
-                <input 
-                type="date" required
-                className="w-full bg-gray-800 border border-gray-700 text-white p-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                value={formData.startDate}
-                onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                />
+                <input type="date" required className="w-full bg-gray-800 border border-gray-700 text-white p-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.startDate} onChange={(e) => setFormData({...formData, startDate: e.target.value})} />
             </div>
-
             <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">End Date</label>
-                <input 
-                type="date" required
-                className="w-full bg-gray-800 border border-gray-700 text-white p-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                value={formData.endDate}
-                onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                />
+                <input type="date" required className="w-full bg-gray-800 border border-gray-700 text-white p-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.endDate} onChange={(e) => setFormData({...formData, endDate: e.target.value})} />
             </div>
-
             <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Reason / Notes</label>
-                <input 
-                type="text" placeholder="Vacation, medical, etc." required
-                className="w-full bg-gray-800 border border-gray-700 text-white p-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                value={formData.reason}
-                onChange={(e) => setFormData({...formData, reason: e.target.value})}
-                />
+                <input type="text" placeholder="Vacation, medical, etc." required className="w-full bg-gray-800 border border-gray-700 text-white p-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.reason} onChange={(e) => setFormData({...formData, reason: e.target.value})} />
             </div>
-
             <button type="submit" className="md:col-span-4 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]">
               Submit Request to HR
             </button>
@@ -183,11 +178,12 @@ const TimeOff = () => {
                 {user.role === 'ADMIN' && <th className="px-8 py-4">Employee</th>}
                 <th className="px-8 py-4">Type</th>
                 <th className="px-8 py-4">Duration</th>
-                <th className="px-8 py-4">Reason</th>
                 <th className="px-8 py-4">Status</th>
-                {/* NEW: Total Leaves Column for Admin */}
-                {user.role === 'ADMIN' && <th className="px-8 py-4 text-center">Total (Approved)</th>}
-                {user.role === 'ADMIN' && <th className="px-8 py-4 text-right">Review</th>}
+                {/* --- SEPARATE COLUMNS --- */}
+                <th className="px-8 py-4">Reason</th>
+                <th className="px-8 py-4">Admin Remark</th>
+                {/* ------------------------ */}
+                {user.role === 'ADMIN' && <th className="px-8 py-4 text-right">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/50">
@@ -221,9 +217,6 @@ const TimeOff = () => {
                         </span>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-gray-400 text-sm italic">
-                    {leave.reason || 'No reason provided'}
-                  </td>
                   <td className="px-8 py-5">
                     <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border
                       ${leave.status === 'APPROVED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
@@ -232,29 +225,47 @@ const TimeOff = () => {
                       {leave.status}
                     </span>
                   </td>
-                  {/* NEW: Admin data cell to show total leaves for this employee */}
-                  {user.role === 'ADMIN' && (
-                    <td className="px-8 py-5 text-center">
-                      <span className="text-xs font-mono font-bold text-gray-400">
-                        {getTotalApprovedDays(leaves.filter(l => l.userId === leave.userId))} Days
-                      </span>
-                    </td>
-                  )}
+
+                  {/* --- COLUMN 1: REASON --- */}
+                  <td className="px-8 py-5 max-w-[200px]">
+                    <div className="flex items-start gap-2">
+                        <div className="mt-1"><FileText size={14} className="text-gray-600" /></div>
+                        <p className="text-gray-300 text-sm font-medium leading-tight line-clamp-2 hover:line-clamp-none transition-all">
+                            "{leave.reason}"
+                        </p>
+                    </div>
+                  </td>
+
+                  {/* --- COLUMN 2: ADMIN REMARK --- */}
+                  <td className="px-8 py-5">
+                    {leave.adminRemark ? (
+                        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-2.5 flex items-start gap-3 w-fit max-w-[250px]">
+                            <div className="shrink-0 mt-0.5">
+                                <ShieldAlert size={14} className="text-indigo-400" />
+                            </div>
+                            <p className="text-xs text-indigo-200 leading-snug break-words">
+                                {leave.adminRemark}
+                            </p>
+                        </div>
+                    ) : (
+                        <span className="text-gray-600 text-[10px] uppercase font-bold tracking-widest ml-4">-</span>
+                    )}
+                  </td>
+                  {/* --------------------------- */}
+
                   {user.role === 'ADMIN' && (
                     <td className="px-8 py-5 text-right">
                         {leave.status === 'PENDING' ? (
                             <div className="flex justify-end gap-2">
                                 <button 
-                                    onClick={() => handleStatus(leave.id, 'APPROVED')} 
+                                    onClick={() => openActionModal(leave, 'APPROVED')} 
                                     className="p-2 bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500 hover:text-white transition-all border border-green-500/20"
-                                    title="Approve"
                                 >
                                     <Check size={16}/>
                                 </button>
                                 <button 
-                                    onClick={() => handleStatus(leave.id, 'REJECTED')} 
+                                    onClick={() => openActionModal(leave, 'REJECTED')} 
                                     className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
-                                    title="Reject"
                                 >
                                     <X size={16}/>
                                 </button>
@@ -276,6 +287,45 @@ const TimeOff = () => {
           )}
         </div>
       </div>
+
+      {/* ADMIN ACTION MODAL (Unchanged) */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-gray-900 border border-gray-700 p-8 rounded-3xl w-full max-w-md shadow-2xl relative">
+                <h3 className="text-2xl font-black text-white mb-2">
+                    {actionType === 'APPROVED' ? 'Approve Request' : 'Reject Request'}
+                </h3>
+                <p className="text-gray-400 text-sm mb-6">
+                    Add a remark for the employee (Optional).
+                </p>
+
+                <textarea
+                    className="w-full bg-black/40 border border-gray-700 text-white p-4 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none h-32 text-sm"
+                    placeholder="E.g. Approved, enjoy your vacation! OR Rejected due to critical project deadline."
+                    value={adminRemark}
+                    onChange={(e) => setAdminRemark(e.target.value)}
+                ></textarea>
+
+                <div className="flex gap-3 mt-6">
+                    <button 
+                        onClick={() => setIsModalOpen(false)}
+                        className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-xl font-bold transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={handleSubmitAction}
+                        className={`flex-1 py-3 rounded-xl font-bold text-white transition-all shadow-lg
+                            ${actionType === 'APPROVED' ? 'bg-green-600 hover:bg-green-700 shadow-green-900/20' : 'bg-red-600 hover:bg-red-700 shadow-red-900/20'}
+                        `}
+                    >
+                        Confirm {actionType === 'APPROVED' ? 'Approval' : 'Rejection'}
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -11,7 +11,6 @@ const Attendance = () => {
   const [status, setStatus] = useState('LOADING');
   const [history, setHistory] = useState([]);
   const [todayRecord, setTodayRecord] = useState(null);
-  const [leaveStats, setLeaveStats] = useState(0); // NEW: Total approved leaves for employee
   
   // State for Admin View
   const [adminRecords, setAdminRecords] = useState([]);
@@ -28,9 +27,6 @@ const Attendance = () => {
       const historyRes = await api.get('/attendance/my-history');
       setHistory(historyRes.data);
 
-      // NEW: Fetch Leave Stats for the logged-in employee
-      const statsRes = await api.get(`/users/stats/${user.id}`);
-      setLeaveStats(statsRes.data.totalLeaveDays);
     } catch (error) {
       console.error("Employee fetch error:", error);
     }
@@ -127,8 +123,6 @@ const Attendance = () => {
                 <th className="px-6 py-4">Check In</th>
                 <th className="px-6 py-4">Check Out</th>
                 <th className="px-6 py-4 text-center">Work Hours</th>
-                {/* NEW COLUMN FOR ADMIN */}
-                <th className="px-6 py-4 text-center">Total Leaves</th>
                 <th className="px-6 py-4 text-right">Status</th>
               </tr>
             </thead>
@@ -165,12 +159,7 @@ const Attendance = () => {
                         {record.workHours ? `${record.workHours}h` : '--'}
                       </span>
                     </td>
-                    {/* NEW CELL FOR ADMIN */}
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-rose-400 font-bold text-sm bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
-                        {record.user.totalApprovedLeaves || 0} Days
-                      </span>
-                    </td>
+                    
                     <td className="px-6 py-4 text-right">
                       <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border
                         ${record.status === 'PRESENT' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}
@@ -204,10 +193,6 @@ const Attendance = () => {
       {/* NEW: LEAVE STATS HEADER CARD FOR EMPLOYEE */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-gray-900/50 backdrop-blur-xl p-6 rounded-[2rem] border border-gray-800 shadow-xl flex items-center justify-between group">
-            <div>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Approved Leaves</p>
-              <p className="text-3xl font-black text-rose-500 tracking-tighter">{leaveStats} Days</p>
-            </div>
             <div className="p-4 bg-rose-500/10 rounded-2xl text-rose-500 border border-rose-500/20 group-hover:scale-110 transition-transform">
               <Coffee size={24} />
             </div>

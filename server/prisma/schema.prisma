@@ -85,6 +85,8 @@ model Leave {
   endDate   DateTime
   reason    String?
   status    LeaveStatus @default(PENDING)
+
+  adminRemark String?
   
   userId    Int
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade) // <--- ADDED THIS

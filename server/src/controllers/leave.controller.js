@@ -46,14 +46,18 @@ const getAllLeaves = async (req, res) => {
   }
 };
 
-// Update Status + Create Audit Log
+// Update Status + Add Remark + Create Audit Log
 const updateLeaveStatus = async (req, res) => {
   try {
-    const { leaveId, status } = req.body;
+    // Extract 'remark' from the body
+    const { leaveId, status, remark } = req.body; 
     
     const updatedLeave = await prisma.leave.update({
       where: { id: parseInt(leaveId) },
-      data: { status },
+      data: { 
+        status,
+        adminRemark: remark // <--- Save the remark here
+      },
       include: { user: true }
     });
 
@@ -61,12 +65,13 @@ const updateLeaveStatus = async (req, res) => {
     await prisma.auditLog.create({
       data: {
         action: `${status}_LEAVE`,
-        details: `Admin processed ${status} for ${updatedLeave.user.firstName}`
+        details: `Admin processed ${status} for ${updatedLeave.user.firstName}. Remark: ${remark || 'None'}`
       }
     });
 
     res.json(updatedLeave);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Failed to update" });
   }
 };
