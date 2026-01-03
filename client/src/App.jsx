@@ -10,19 +10,19 @@ import Signup from './pages/Signup';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 
-// Core Feature Pages (Now importing the REAL files)
+// Core Feature Pages
 import Attendance from './pages/Attendance';
-import EmployeeList from './pages/EmployeeList'; // This is your Admin Dashboard
-import TimeOff from './pages/TimeOff';           // Connects to /leaves
-import Profile from './pages/Profile';           // Connects to /profile
+import EmployeeList from './pages/EmployeeList';
+import TimeOff from './pages/TimeOff';
+import Profile from './pages/Profile';
+import AboutUs from './pages/About';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/* Toast Notifications */}
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-        
+
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -31,28 +31,30 @@ function App() {
           {/* Private Routes (Wrapped in Layout) */}
           <Route element={<PrivateRoute />}>
             <Route element={<Layout />}>
-              
-              {/* Default Redirect to Attendance */}
-              <Route path="/dashboard" element={<Navigate to="/attendance" />} />
-              
-              {/* 1. Attendance (Check In/Out) */}
-              <Route path="/attendance" element={<Attendance />} />
-              
-              {/* 2. Leaves / Time Off Management */}
-              <Route path="/leaves" element={<TimeOff />} />
-              
-              {/* 3. User Profile & Salary View */}
-              <Route path="/profile" element={<Profile />} />
-              
-              {/* 4. Admin Only: Employee Directory & Analytics */}
-              <Route element={<PrivateRoute requiredRole="ADMIN" />}>
-                <Route path="/employees" element={<EmployeeList />} />
-              </Route>
 
+              {/* --- UPDATED: Default Redirect --- */}
+              {/* Now, when a user hits /dashboard or just logs in, they land on Employees */}
+              <Route path="/" element={<Navigate to="/employees" />} />
+              <Route path="/dashboard" element={<Navigate to="/employees" />} />
+
+              {/* 1. Employee Directory (Now Shared by Admin & Employee) */}
+              {/* Your EmployeeList.jsx now handles the role-based view internally */}
+              <Route path="/employees" element={<EmployeeList />} />
+
+              {/* 2. Attendance (Check In/Out) */}
+              <Route path="/attendance" element={<Attendance />} />
+
+              {/* 3. Leaves / Time Off Management */}
+              <Route path="/leaves" element={<TimeOff />} />
+
+              {/* 4. User Profile & Salary View */}
+              <Route path="/profile" element={<Profile />} />
+
+              <Route path="/about" element={<AboutUs />} />
             </Route>
           </Route>
 
-          {/* Catch-all: Redirect to Login */}
+          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </AuthProvider>

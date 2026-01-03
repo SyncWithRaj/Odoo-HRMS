@@ -23,6 +23,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/salary', require('./routes/salary.route'));
 // Test Route
 app.get('/', (req, res) => {
     res.json({ message: "Dayflow API is running 🚀" });

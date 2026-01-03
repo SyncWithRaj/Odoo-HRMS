@@ -1,75 +1,107 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, LogOut, Plane, CheckCircle } from 'lucide-react'; // Icons
+import { User, LogOut, Clock, ChevronDown, Bell } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Helper to check active tab
-  const isActive = (path) => location.pathname.includes(path) 
-    ? "bg-gray-700 text-white" 
-    : "text-gray-400 hover:text-white hover:bg-gray-800";
+  const isActive = (path) => location.pathname.includes(path);
 
   return (
-    <nav className="bg-gray-800 border-b border-gray-700 px-6 py-3 flex items-center justify-between">
-      {/* LEFT: Logo & Tabs */}
-      <div className="flex items-center space-x-8">
-        <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
-          DayFlow
-        </div>
+    <nav className="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 px-8 py-3 flex items-center justify-between sticky top-0 z-50">
+      {/* LEFT: Logo & Navigation */}
+      <div className="flex items-center space-x-12">
+        <Link 
+          to="/" 
+          className="text-2xl font-black tracking-tighter text-white flex items-center gap-2 group"
+        >
+          <div className="w-8 h-8 bg-indigo-500 rounded-lg rotate-3 group-hover:rotate-12 transition-transform duration-300 flex items-center justify-center">
+             <Clock className="text-white" size={18} />
+          </div>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+            DayFlow
+          </span>
+        </Link>
         
-        <div className="flex space-x-2">
-          {user?.role === 'ADMIN' && (
-            <Link to="/employees" className={`px-4 py-2 rounded-md text-sm font-medium transition ${isActive('/employees')}`}>
-              Employees
+        <div className="flex items-center gap-1">
+          {[
+            { name: 'Employees', path: '/employees' },
+            { name: 'Attendance', path: '/attendance' },
+            { name: 'Time Off', path: '/leaves' },
+            { name: 'About Us', path: '/about' },
+          ].map((item) => (
+            <Link 
+              key={item.path}
+              to={item.path} 
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                isActive(item.path) 
+                  ? "bg-indigo-500/10 text-indigo-400 shadow-[inset_0_0_12px_rgba(99,102,241,0.1)]" 
+                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
+              }`}
+            >
+              {item.name}
             </Link>
-          )}
-          <Link to="/attendance" className={`px-4 py-2 rounded-md text-sm font-medium transition ${isActive('/attendance')}`}>
-            Attendance
-          </Link>
-          <Link to="/leaves" className={`px-4 py-2 rounded-md text-sm font-medium transition ${isActive('/leaves')}`}>
-            Time Off
-          </Link>
+          ))}
         </div>
       </div>
 
-      {/* RIGHT: Status & Profile */}
-      <div className="flex items-center space-x-6">
-        {/* Status Indicator (Hardcoded for now, dynamic later) */}
-        <div className="flex items-center space-x-2 bg-gray-900 px-3 py-1 rounded-full border border-gray-700">
-          <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-          <span className="text-xs text-gray-300">Checked In</span>
+      {/* RIGHT: Indicators & Profile */}
+      <div className="flex items-center space-x-5">
+        
+        {/* Check-in Status */}
+        <div className="hidden sm:flex items-center space-x-3 bg-gray-950/50 px-4 py-1.5 rounded-full border border-gray-800">
+          <div className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </div>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Checked In</span>
         </div>
+
+        {/* Notifications Icon (Visual Polish) */}
+        <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition">
+          <Bell size={18} />
+        </button>
 
         {/* Profile Dropdown */}
         <div className="relative">
           <button 
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center space-x-2 focus:outline-none"
+            className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-gray-800 transition-colors group border border-transparent hover:border-gray-700"
           >
-            <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold">
+            <div className="w-8 h-8 bg-gradient-to-tr from-indigo-600 to-indigo-400 rounded-full flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
               {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
             </div>
+            <ChevronDown size={14} className={`text-gray-500 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 z-50">
-              <div className="px-4 py-2 border-b border-gray-700">
-                <p className="text-sm text-white font-bold">{user?.firstName} {user?.lastName}</p>
-                <p className="text-xs text-gray-400">{user?.role}</p>
+            <div className="absolute right-0 mt-3 w-56 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+              <div className="px-5 py-3 border-b border-gray-800 mb-1">
+                <p className="text-sm text-white font-bold truncate">{user?.firstName} {user?.lastName}</p>
+                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-tighter mt-0.5">{user?.role}</p>
               </div>
-              <Link to="/profile" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
+              
+              <Link to="/profile" className="flex items-center gap-3 px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-indigo-500/10 transition group">
+                <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition">
+                  <User size={16} />
+                </div>
                 My Profile
               </Link>
-              <button 
-                onClick={logout}
-                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-700 flex items-center"
-              >
-                <LogOut className="w-4 h-4 mr-2" /> Log Out
-              </button>
+              
+              <div className="px-2 mt-1">
+                <button 
+                  onClick={logout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                    <LogOut size={16} />
+                  </div>
+                  Log Out
+                </button>
+              </div>
             </div>
           )}
         </div>
