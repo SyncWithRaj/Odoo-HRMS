@@ -1,0 +1,93 @@
+// server/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums for Fixed Values
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeaveType {
+  PAID
+  SICK
+  UNPAID
+}
+
+model User {
+  id          Int       @id @default(autoincrement())
+  employeeId  String    @unique // The "OIJODO..." ID
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  role        Role      @default(EMPLOYEE)
+  phone       String?
+  address     String?
+  joiningDate DateTime  @default(now())
+  profilePic  String?   // URL to image
+
+  // Relations
+  attendance  Attendance[]
+  leaves      Leave[]
+  salary      Salary?   // One-to-one relation
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date // Store just the date part
+  checkIn   DateTime?
+  checkOut  DateTime?
+  status    AttendanceStatus @default(ABSENT)
+  workHours Float?   // Calculated hours
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Leave {
+  id        Int         @id @default(autoincrement())
+  type      LeaveType
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  status    LeaveStatus @default(PENDING)
+
+  userId    Int
+  user      User        @relation(fields: [userId], references: [id])
+}
+
+model Salary {
+  id              Int     @id @default(autoincrement())
+  basicSalary     Float
+  hra             Float?
+  allowances      Float?
+  deductions      Float?
+  netSalary       Float?
+
+  userId          Int     @unique
+  user            User    @relation(fields: [userId], references: [id])
+}
